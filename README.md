@@ -1,2 +1,7 @@
 # NYU-Advanced-Database-Systems
-This is my project of NYU course "Advanced Database Systems"
+
+Replicated Concurrency Control and Recovery (RepCRec)  
+
+**Team members**:  
+Lingwei Luo, Net ID: ll4123  
+Yuyang Fan, Net ID: yf1357

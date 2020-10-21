@@ -1,4 +1,5 @@
 import re
+from Data_Manager import DataManager
 
 
 class InvalidInstructionError(Exception):
@@ -18,32 +19,42 @@ class Transaction:
 # Transaction Manager is used to process all instructions and conduct corresponding operations for various transactions
 class TransactionManager:
 
-    # initialize Transaction Manager
+
     def __init__(self):
-        # call DataManager to finish initialization of all sites
-        pass
+        """
+        Initialize Transaction Manager
+        Call DataManager to finish initialization of all sites
+        """
+        self.site_list = [DataManager(site_id) for site_id in range(1,11)]
 
 
-    # output all useful info about all sites
     def dump(self):
-        #call DM to print info about each site
-        pass
+        """
+        Output all useful info about all sites
+        Call DM to print info about each site
+        """
+        for site in self.site_list:
+            site.dump()
 
 
     # process a line from input file
-    def process_line(self, line):
-        # return True or False, which indicate whether this line is processed correctly
-        # call process_command to do corresponding operations
+    def process_line(self, line: str):
+        """
+        Parse a line and pass all paras to process_command
+        :param line: a line from input file
+        """
         paras = re.findall(r"[\w']+", line)
-        print(paras)
+        # print(paras)
         command = paras.pop(0)
         self.process_command(command, paras)
 
 
-    # do corresponding operation according to the command
-    # ["begin", "beginRO", "read", "write", "dump", "end", "fail", "recover"]
     def process_command(self, command, paras):
-        # do operations according to command
+        """
+        Do corresponding operation according to the command and paras
+        :param command: ["begin", "beginRO", "read", "write", "dump", "end", "fail", "recover"]
+        :param paras: a list of paras like [T1,x1,101]
+        """
         if command in("begin", "beginRO"):
             self.beigin(paras[0])
         elif command == "R":
@@ -51,7 +62,8 @@ class TransactionManager:
         elif command == "W":
             self.write(paras[0],paras[1],paras[2])
         elif command == "dump":
-            self.dump()
+            # self.dump()
+            pass
         elif command == "end":
             self.end(paras[0])
         elif command == "fail":

@@ -1,18 +1,83 @@
 
+class CommitValue:
+
+    def __init__(self, value: int, commit_ts: int):
+        """
+        Initialize CommitValue Object
+        :param value: actual value
+        :param commit_ts: commit timestamp of the value
+        """
+        self.value = value # actual value of this commit value in commit_queue
+        self.commit_ts = commit_ts # commit timestamp of this value
+
+
+class Variable:
+
+    def __init__(self, variable_id: str, initial_value: CommitValue, is_replicated: bool):
+        """
+        Initialize Variable Object
+        :param variable_id: id of this variable
+        :param initial_value: value assigned in initialization, will be added to commit queue
+        :param is_replicated: whether this variable is replicated, even index var is replicated
+        """
+        self.variable_id = variable_id
+        self.commit_queue = [initial_value] # later commit value will be append to the tail
+        self.is_replicated = is_replicated
+
+
+class VarLockManager:
+
+    def __init__(self, variable_id: str):
+        """
+        Initialize VarLockManager Object
+        :param variable_id: indicate this lock manager belong to which variable
+        """
+        self.variable_id = variable_id
+        self.cur_lock = None
+        self.lock_queue = []
+
+
 # A DataManager represents a site, where all variables and locks would be stored here.
 class DataManager:
 
 
     # initialize variables in each site, create data table and lock table
-    def __init__(self, site_id):
+    def __init__(self, site_id: int):
+        """
+        Initialize DataManager Object
+        :param site_id: id of this site
+        """
         # finish initialization of site
-        pass
+        self.is_up = True
+        self.site_id = site_id
+        self.data_table = {}
+        self.lock_table = {}
+
+        # add all variables which belong to this site
+        for num in range(1,21):
+            var_id = 'x' + str(num)
+            # Even indexed variables are at all sites
+            if num%2 == 0:
+                self.lock_table[var_id] = VarLockManager(var_id)
+                self.data_table[var_id] = Variable(var_id, CommitValue(10*num, 0), True)
+            # The odd indexed variables are at one site each
+            elif num%10 + 1 == self.site_id:
+                self.lock_table[var_id] = VarLockManager(var_id)
+                self.data_table[var_id] = Variable(var_id, CommitValue(10*num, 0), False)
 
 
-    # output all useful info about this site
     def dump(self):
-        # print site status, list of commit value for all variables
-        pass
+        """
+        Output all useful info about this site
+        Print site status, latest commit value for all variables
+        """
+        status = "UP" if self.is_up else "DOWN"
+        out = "site {} [{}] - ".format(self.site_id, status)
+
+        for variable in self.data_table.values():
+            out += (variable.variable_id + ": " + str(variable.commit_queue[-1].value) + ", ")
+        out += "\n"
+        print(out)
 
 
     # a transaction T want to read a variable i from this site

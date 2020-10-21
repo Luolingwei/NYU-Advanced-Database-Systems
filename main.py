@@ -10,9 +10,10 @@ if __name__ == '__main__':
         cur_file = input_path + '/' + file
         f = open(cur_file, "r")
         print("\n")
-        print("Reading from " + cur_file)
+        print("Reading from " + cur_file + "...")
 
         ts_manager = TransactionManager()
+        # ts_manager.dump()
         for line in f.readlines():
             line = line.strip()
             if line and not line.startswith(("#","//")):
