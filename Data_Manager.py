@@ -41,13 +41,12 @@ class VarLockManager:
 class DataManager:
 
 
-    # initialize variables in each site, create data table and lock table
     def __init__(self, site_id: int):
         """
         Initialize DataManager Object
+        Initialize variables in each site, create data table and lock table
         :param site_id: id of this site
         """
-        # finish initialization of site
         self.is_up = True
         self.site_id = site_id
         self.data_table = {}
@@ -76,7 +75,6 @@ class DataManager:
 
         for variable in self.data_table.values():
             out += (variable.variable_id + ": " + str(variable.commit_queue[-1].value) + ", ")
-        out += "\n"
         print(out)
 
 
@@ -84,6 +82,11 @@ class DataManager:
     def read(self, transaction_id, variable_id):
         # First judge the current lock type on this variable, then try to get read lock of this variable,
         # return True or False, which indicate whether this read is success or fail
+        pass
+
+    # a read-only transaction T want to read a snapshot of variable i from this site
+    def read_snapshot(self, transaction_id, variable_id):
+        # find the latest commit value of this variable before begin time of T in commit queue.
         pass
 
 
