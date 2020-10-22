@@ -1,3 +1,5 @@
+from typing import List
+from enum import Enum, unique
 import re
 from Data_Manager import DataManager
 
@@ -9,12 +11,18 @@ class InvalidInstructionError(Exception):
         self.message = message
 
 
+@unique
+class OperationType(Enum):
+    R = 0
+    W = 1
+
+
 class Operation:
 
-    def __init__(self, command: str, transaction_id: str, variable_id: str, value: int = None):
+    def __init__(self, command: OperationType, transaction_id: str, variable_id: str, value: int = None):
         """
         Initialize an operation, the operation type is only Read/Write
-        :param command: 'R' or 'W' indicating the operation type
+        :param command: R or W indicating the operation type
         :param transaction_id: id of this transaction
         :param variable_id: id of variable which T wants to access
         :param value: the write value in write operation, by default is None
@@ -47,6 +55,7 @@ class Transaction:
         self.begin_ts = begin_ts
         self.is_read_only = is_read_only
         self.should_abort = False
+        self.site_access_list = []
 
     def __repr__(self):
         """
@@ -97,7 +106,7 @@ class TransactionManager:
         self.ts += 1 # a newline in the input means time advances by one
 
 
-    def process_command(self, command, paras):
+    def process_command(self, command: str, paras: List[str]):
         """
         Do corresponding operation according to the command and paras
         :param command: ["begin", "beginRO", "read", "write", "dump", "end", "fail", "recover"]
@@ -110,7 +119,7 @@ class TransactionManager:
         elif command == "R":
             self.add_read_opration(paras[0],paras[1])
         elif command == "W":
-            self.add_write_opration(paras[0],paras[1],paras[2])
+            self.add_write_opration(paras[0],paras[1],int(paras[2]))
         elif command == "dump":
             # self.dump()
             pass
@@ -138,12 +147,12 @@ class TransactionManager:
             if not cur_transaction:
                 self.operation_set.remove(operation)
                 continue
-            if operation.command == 'R':
+            if operation.command == OperationType.R:
                 if cur_transaction.is_read_only:
                     success = self.read_snapshot(operation.transaction_id,operation.variable_id)
                 else:
                     success = self.read(operation.transaction_id,operation.variable_id)
-            elif operation.command == "W":
+            elif operation.command == OperationType.W:
                 success = self.write(operation.transaction_id,operation.variable_id,operation.value)
             else:
                 print("Invalid command {} in operation".format(operation.command))
@@ -167,13 +176,30 @@ class TransactionManager:
         """
         if not self.transaction_table.get(transaction_id):
             raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
-        self.operation_set.add(Operation('R', transaction_id, variable_id))
+        self.operation_set.add(Operation(OperationType.R, transaction_id, variable_id))
 
 
-    # a transaction T want to read a variable i
-    def read(self, transaction_id, variable_id):
-        # call DM to read from any sites which have this variable
-        # return True or False, which indicate whether this read is success or fail
+    def read(self, transaction_id: str, variable_id: str):
+        """
+         A transaction T want to read a variable i
+         Call DM to read from any sites which have this variable
+        :param transaction_id: id of this transaction
+        :param variable_id: id of variable which T wants to access
+        :return: True means read succeed, False means read fail
+        """
+        cur_transaction: Transaction = self.transaction_table.get(transaction_id)
+        if not cur_transaction:
+            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+
+        for site in self.site_list:
+            if site.is_up and site.has_variable(variable_id):
+                return_result = site.read(transaction_id,variable_id)
+                # read is success, update transaction's site_access list
+                if return_result.success:
+                    cur_transaction.site_access_list.append(site.site_id)
+                    print("{} successfully read {} from site {}, return {}".
+                          format(transaction_id, variable_id, site.site_id,return_result.value))
+                    return True
         return False
 
 
@@ -193,14 +219,14 @@ class TransactionManager:
         """
         if not self.transaction_table.get(transaction_id):
             raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
-        self.operation_set.add(Operation('W', transaction_id, variable_id, value))
+        self.operation_set.add(Operation(OperationType.W, transaction_id, variable_id, value))
 
 
     # a transaction T want to write a variable i to value X
     def write(self, transaction_id, variable_id, value):
         # call DM to write to all up sites, as long as write lock can be acquired,
         # return True or False, which indicate whether this write is success or fail
-        return True
+        return False
 
 
     def beigin(self, transaction_id: str, is_read_only: bool):
@@ -221,7 +247,7 @@ class TransactionManager:
             print("transaction {} begins".format(transaction_id))
 
 
-    def end(self, transaction_id):
+    def end(self, transaction_id: str):
         """
         End a transaction, if the abort flag of this transaction is true, abort it. Otherwise commit it.
         :param transaction_id: id of this transaction

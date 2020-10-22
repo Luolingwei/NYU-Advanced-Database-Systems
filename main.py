@@ -14,10 +14,10 @@ if __name__ == '__main__':
 
         # begin to process commands in 1 input file
         ts_manager = TransactionManager()
-        ts_manager.dump()
         for line in f.readlines():
             line = line.strip()
             if line and not line.startswith(("#","//")):
                 ts_manager.process_line(line)
 
+        ts_manager.dump()
         print(ts_manager.transaction_table)
