@@ -138,6 +138,15 @@ class VarLockManager:
         self.lock_queue = [] # a queue to store all failed attempted lock
 
 
+    def reset(self):
+        """
+        Reset the status of this VarLockManager to initial status
+        :return:
+        """
+        self.cur_lock = None
+        self.lock_queue = []
+
+
     def has_queued_write_lock(self, exclude_transaction_id = None):
         """
         Judge whether there is queued write lock for this variable
@@ -191,6 +200,8 @@ class DataManager:
         self.site_id = site_id
         self.data_table = {} # {variable id: Variable}
         self.lock_table = {} # {variable id: VarLockManager}
+        self.fail_time_list = [] # latest fail time will be append at tail
+        self.recover_time_list = [] # latest recover time will be append at tail
 
         # add all variables which belong to this site
         for num in range(1,21):
@@ -224,7 +235,7 @@ class DataManager:
         lock_info = "site {} [{}] lock info - ".format(self.site_id, status)
 
         for variable in self.data_table.values():
-            site_info += "{}: {}, ".format(variable.variable_id, variable.commit_queue[-1].value)
+            site_info += "{}: {}, ".format(variable.variable_id, variable.get_latest_commit_value())
             current_lock = self.lock_table.get(variable.variable_id).cur_lock
             if current_lock: lock_info += "{}: {}, ".format(variable.variable_id, current_lock)
         print(site_info)
@@ -267,7 +278,7 @@ class DataManager:
                     return RW_Result(True, variable.get_temp_value())
                 # other transaction is holding a write lock on var, add this read lock to lock queue
                 else:
-                    var_lock_manager.add_lock_to_queue(ReadLock(variable_id,transaction_id,True))
+                    var_lock_manager.add_lock_to_queue(ReadLock(variable_id, transaction_id, True))
                     return RW_Result(False)
 
         # var has no lock on it
@@ -282,11 +293,72 @@ class DataManager:
         pass
 
 
-    # a transaction T want to write a variable i to value V in this site
+    def can_get_write_lock(self, transaction_id: str, variable_id: str):
+        """
+        Judge whether write lock of variable_id can be obtained from this site
+        :param transaction_id: id of this transaction
+        :param variable_id: id of variable which T wants to write
+        :return: True / False means can/can't get write lock
+        """
+
+        variable: Variable = self.data_table.get(variable_id)
+        var_lock_manager: VarLockManager = self.lock_table.get(variable_id)
+
+        current_lock = var_lock_manager.cur_lock
+
+        # currently, var has been locked
+        if current_lock:
+
+            if current_lock.lock_type == LockType.R:
+                # current transaction already get a read lock on var, judge whether it is shared
+                if len(current_lock.transaction_ids)>1: # shared with other T, can not write
+                    var_lock_manager.add_lock_to_queue(WriteLock(variable_id, transaction_id, True))
+                    return False
+                if transaction_id not in current_lock.transaction_ids: # hold by other T, can not write
+                    var_lock_manager.add_lock_to_queue(WriteLock(variable_id, transaction_id, True))
+                    return False
+
+                # read lock hold only by this transaction, try to promote its lock from read to write
+
+                # have other T's queued write lock, can not skip
+                if var_lock_manager.has_queued_write_lock(transaction_id):
+                    var_lock_manager.add_lock_to_queue(WriteLock(variable_id, transaction_id, True))
+                    return False
+                # can promote read lock to write lock
+                return True
+
+            elif current_lock.lock_type == LockType.W:
+                # current transaction already get a write lock on var, temp value has been written
+                if current_lock.transaction_ids == transaction_id:
+                    return True
+                # other transaction is holding a write lock on var, can not write
+                else:
+                    var_lock_manager.add_lock_to_queue(WriteLock(variable_id, transaction_id, True))
+                    return False
+
+        # var has no lock on it
+        else:
+            return True
+
+
     def write(self, transaction_id, variable_id, value):
-        # First judge the current lock type on this variable, then try to get write lock of this variable,
-        # return True or False, which indicate whether this write is success or fail
-        pass
+        """
+        A transaction T want to write a variable i to value V in this site
+        As write operation would be first judged by can_get_write_lock, so when we do write,
+        all write lock can must be obtained, we can safely write value to var and set new write lock.
+        :param transaction_id: id of this transaction
+        :param variable_id: id of variable which T wants to write
+        :param value: value which T wants to write to var, will be write to temp value
+        :return: When we do write, write can be guaranteed to be success, so we always return RW_Result(True)
+        """
+        variable: Variable = self.data_table.get(variable_id)
+        var_lock_manager: VarLockManager = self.lock_table.get(variable_id)
+
+        # Write value to temp_value of var, which will be committed when T commit
+        variable.temp_value = TempValue(value, transaction_id)
+        # Safely set new lock to this write lock
+        var_lock_manager.cur_lock = WriteLock(variable_id, transaction_id)
+        return RW_Result(True)
 
 
     # a transaction is aborted, do corresponding operations in current site
@@ -303,8 +375,14 @@ class DataManager:
 
     # a site fail, do corresponding operations in current site
     def fail(self, fail_ts):
-        # Set site status to down and clear lock table in this site
-        pass
+        """
+        A site fail, set site status to down and reset lock manager for all vars in this site
+        :param fail_ts: fail timestamp of this site
+        """
+        self.is_up = False
+        self.fail_time_list.append(fail_ts)
+        for var_lock_manager in self.lock_table.values():
+            var_lock_manager.reset()
 
 
     # a site recover, do corresponding operations in current site

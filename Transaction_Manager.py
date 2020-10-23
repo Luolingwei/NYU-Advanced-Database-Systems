@@ -32,6 +32,7 @@ class Operation:
         self.variable_id = variable_id
         self.value = value
 
+
     def __repr__(self):
         """
         Output operation object info
@@ -57,6 +58,7 @@ class Transaction:
         self.should_abort = False
         self.site_access_list = []
 
+
     def __repr__(self):
         """
         Output transaction object info
@@ -77,7 +79,7 @@ class TransactionManager:
         Call DataManager to finish initialization of all sites
         """
         self.ts = 0 # record current timestamp
-        self.transaction_table = {} # transaction table to record all transactions
+        self.transaction_table = {} # transaction table to record all transactions, {transaction_id: Transaction}
         self.operation_set = set() # all operations which wait to be executed, Read/Write
         self.site_list = [DataManager(site_id) for site_id in range(1,11)] # list of all sites
 
@@ -126,7 +128,7 @@ class TransactionManager:
         elif command == "end":
             self.end(paras[0])
         elif command == "fail":
-            self.fail(paras[0])
+            self.fail(int(paras[0]))
         elif command == "recover":
             self.recover(paras[0])
         else:
@@ -181,8 +183,8 @@ class TransactionManager:
 
     def read(self, transaction_id: str, variable_id: str):
         """
-         A transaction T want to read a variable i
-         Call DM to read from any sites which have this variable
+        A transaction T want to read a variable i
+        Call DM to read from any sites which have this variable
         :param transaction_id: id of this transaction
         :param variable_id: id of variable which T wants to access
         :return: True means read succeed, False means read fail
@@ -222,11 +224,42 @@ class TransactionManager:
         self.operation_set.add(Operation(OperationType.W, transaction_id, variable_id, value))
 
 
-    # a transaction T want to write a variable i to value X
-    def write(self, transaction_id, variable_id, value):
-        # call DM to write to all up sites, as long as write lock can be acquired,
-        # return True or False, which indicate whether this write is success or fail
-        return False
+    def write(self, transaction_id: str, variable_id: str, value: int):
+        """
+        A transaction T want to write value X to a variable i
+        Call DM to write to all up sites, as long as write lock can be acquired
+        Need to first check whether can obtain all write locks, if not, can not write
+        :param transaction_id: id of this transaction
+        :param variable_id: id of variable which T wants to write
+        :param value: value which T wants to write to var
+        :return: Return True or False, which indicate whether this write is success or fail
+        """
+        cur_transaction: Transaction = self.transaction_table.get(transaction_id)
+        if not cur_transaction:
+            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+
+        # judge whether all relevant up sites can be written
+        can_get_all_write_lock = True
+        all_relevant_site_down = True
+        for site in self.site_list:
+            if site.is_up and site.has_variable(variable_id):
+                all_relevant_site_down = False
+                if not site.can_get_write_lock(transaction_id, variable_id):
+                    can_get_all_write_lock = False
+
+        # all relevant up sites can be written
+        if not all_relevant_site_down and can_get_all_write_lock:
+            for site in self.site_list:
+                if site.is_up and site.has_variable(variable_id):
+                    site.write(transaction_id, variable_id, value)
+                    cur_transaction.site_access_list.append(site.site_id)
+                    print("{} successfully write {} to {} in site {}".
+                          format(transaction_id, variable_id, value, site.site_id))
+            return True
+
+        # al least 1 relevant up site can not be written, give up
+        else:
+            return False
 
 
     def beigin(self, transaction_id: str, is_read_only: bool):
@@ -273,11 +306,24 @@ class TransactionManager:
         print("transaction {} commit".format(transaction_id))
 
 
-    # a site fail, do corresponding operations for related transactions
-    def fail(self, site_id):
-        # call DM to do failure operations in site
-        # for all transactions which have ever accessed this failed site, set their abort flag to true
-        pass
+    def fail(self, site_id: int):
+        """
+        A site fail, all transactions which ever access this site should abort eventually
+        :param site_id: id of the site to abort
+        """
+        if not 1 <= site_id <= len(self.site_list):
+            raise InvalidInstructionError("try to fail site with id {}, which doesn't exist".format(site_id))
+
+        site = self.site_list[site_id-1]
+        site.fail(self.ts)
+        print("site {} fail at time {}".format(site_id, self.ts))
+        for transaction in self.transaction_table.values():
+            # skip read-only T and already to be aborted T
+            if transaction.is_read_only or transaction.should_abort:
+                continue
+            if site_id in transaction.site_access_list:
+                transaction.should_abort = True
+                print("Set transaction {}'s should_abort flag to True".format(transaction.transaction_id))
 
 
     # a site recover, do corresponding operations for related transactions
