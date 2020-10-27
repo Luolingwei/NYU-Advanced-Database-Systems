@@ -287,6 +287,7 @@ class DataManager:
             return RW_Result(True, variable.get_latest_commit_value())
 
 
+    # Fan
     # a read-only transaction T want to read a snapshot of variable i from this site
     def read_snapshot(self, transaction_id, variable_id):
         # find the latest commit value of this variable before begin time of T in commit queue.
@@ -361,15 +362,19 @@ class DataManager:
         return RW_Result(True)
 
 
+    # Fan
     # a transaction is aborted, do corresponding operations in current site
     def abort(self, transaction_id):
-        # release current locks and queued locks of this transaction
+        # release current locks and queued locks of this transaction,
+        # update lock table.
         pass
 
 
+    # Fan
     # a transaction is committed, do corresponding operations in current site
     def commit(self, transaction_id):
-        # Add all temp value of this transaction in this site to commit list, release all current and queued locks.
+        # Add all temp value of this transaction in this site to commit list, release all current and queued locks,
+        # update lock table.
         pass
 
 
@@ -385,12 +390,21 @@ class DataManager:
             var_lock_manager.reset()
 
 
+    # Luo
     # a site recover, do corresponding operations in current site
     def recover(self, recover_ts):
         # Set site status to up
         pass
 
 
+    # Fan
+    # update lock table to move queued lock
+    def update_lock_table(self):
+        # After a transaction commit/abort, move possible queued lock to variable.
+        pass
+
+
+    # Luo
     # return this site’s wait for graph for cycle detaction
     def get_blocking_graph(self):
         # output a waits-for all variables in current site

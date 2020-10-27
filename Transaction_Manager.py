@@ -205,6 +205,7 @@ class TransactionManager:
         return False
 
 
+    #Fan
     # a read-only transaction T want to read a snapshot of variable i
     def read_snapshot(self, transaction_id, variable_id):
         # call DM to read from any sites which have this variable,
@@ -257,7 +258,7 @@ class TransactionManager:
                           format(transaction_id, variable_id, value, site.site_id))
             return True
 
-        # al least 1 relevant up site can not be written, give up
+        # at least 1 relevant up site can not be written, give up
         else:
             return False
 
@@ -294,12 +295,14 @@ class TransactionManager:
             self.commit(cur_transaction.transaction_id)
 
 
+    # Fan
     # a transaction is about to abort, do corresponding operations
     def abort(self, transaction_id):
         # call DM to abort this transaction, remove transaction id from transaction table in TM.
         print("transaction {} abort".format(transaction_id))
 
 
+    # Fan
     # a transaction is about to commit, do corresponding operations
     def commit(self, transaction_id):
         # call DM to commit this transaction, remove transaction id from transaction table in TM.
@@ -326,12 +329,14 @@ class TransactionManager:
                 print("Set transaction {}'s should_abort flag to True".format(transaction.transaction_id))
 
 
+    # Luo
     # a site recover, do corresponding operations for related transactions
     def recover(self, site_id):
         # call DM to do recovery operations in site
         pass
 
 
+    # Luo
     # return this site’s wait for graph for cycle detection
     def solve_deadlock(self):
         # collect waits-for graphs from all sites, then abort youngest transaction if there is a cycle.
