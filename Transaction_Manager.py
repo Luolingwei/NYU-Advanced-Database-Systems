@@ -1,72 +1,7 @@
 from typing import List
-from enum import Enum, unique
+from Utils import InvalidInstructionError, OperationType, Operation, Transaction
 import re
 from Data_Manager import DataManager
-
-
-class InvalidInstructionError(Exception):
-    """Error thrown for invalid instructions"""
-
-    def __init__(self, message):
-        self.message = message
-
-
-@unique
-class OperationType(Enum):
-    R = 0
-    W = 1
-
-
-class Operation:
-
-    def __init__(self, command: OperationType, transaction_id: str, variable_id: str, value: int = None):
-        """
-        Initialize an operation, the operation type is only Read/Write
-        :param command: R or W indicating the operation type
-        :param transaction_id: id of this transaction
-        :param variable_id: id of variable which T wants to access
-        :param value: the write value in write operation, by default is None
-        """
-        self.command = command
-        self.transaction_id = transaction_id
-        self.variable_id = variable_id
-        self.value = value
-
-
-    def __repr__(self):
-        """
-        Output operation object info
-        """
-        if self.value:
-            return "{} ({}, {}, {})".format(self.command, self.transaction_id, self.variable_id, self.value)
-        else:
-            return "{} ({}, {})".format(self.command, self.transaction_id, self.variable_id)
-
-
-class Transaction:
-
-    def __init__(self, transaction_id: str, begin_ts: int, is_read_only: bool):
-        """
-        Initialize a Transaction
-        :param transaction_id: id of this transaction
-        :param begin_ts: begin timestamp of this transaction
-        :param is_read_only: indicate whether this is a read-only transaction
-        """
-        self.transaction_id = transaction_id
-        self.begin_ts = begin_ts
-        self.is_read_only = is_read_only
-        self.should_abort = False
-        self.site_access_list = []
-
-
-    def __repr__(self):
-        """
-        Output transaction object info
-        """
-        if self.is_read_only:
-            return "[{}, begin at {}, read-only]".format(self.transaction_id, self.begin_ts)
-        else:
-            return "[{}, begin at {}]".format(self.transaction_id, self.begin_ts)
 
 
 # Transaction Manager is used to process all instructions and conduct corresponding operations for various transactions
