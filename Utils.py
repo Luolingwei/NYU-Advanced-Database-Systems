@@ -81,7 +81,7 @@ class RW_Result:
 ################### Utils for Transaction Manager ###################
 #####################################################################
 
-class InvalidInstructionError(Exception):
+class InvalidCommandError(Exception):
     """Error thrown for invalid instructions"""
 
     def __init__(self, message):

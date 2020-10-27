@@ -1,5 +1,5 @@
 from typing import List
-from Utils import InvalidInstructionError, OperationType, Operation, Transaction
+from Utils import InvalidCommandError, OperationType, Operation, Transaction
 import re
 from Data_Manager import DataManager
 
@@ -67,7 +67,7 @@ class TransactionManager:
         elif command == "recover":
             self.recover(paras[0])
         else:
-            raise InvalidInstructionError("Unknown Instruction: " + command)
+            raise InvalidCommandError("Unknown Instruction: " + command)
 
 
     def execute_operations(self):
@@ -112,7 +112,7 @@ class TransactionManager:
         :param variable_id: id of variable which T wants to access
         """
         if not self.transaction_table.get(transaction_id):
-            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+            raise InvalidCommandError("{} doesn't exist".format(transaction_id))
         self.operation_set.add(Operation(OperationType.R, transaction_id, variable_id))
 
 
@@ -126,7 +126,7 @@ class TransactionManager:
         """
         cur_transaction: Transaction = self.transaction_table.get(transaction_id)
         if not cur_transaction:
-            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+            raise InvalidCommandError("{} doesn't exist".format(transaction_id))
 
         for site in self.site_list:
             if site.is_up and site.has_variable(variable_id):
@@ -156,7 +156,7 @@ class TransactionManager:
         :param value: value which T wants to write to variable
         """
         if not self.transaction_table.get(transaction_id):
-            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+            raise InvalidCommandError("{} doesn't exist".format(transaction_id))
         self.operation_set.add(Operation(OperationType.W, transaction_id, variable_id, value))
 
 
@@ -172,7 +172,7 @@ class TransactionManager:
         """
         cur_transaction: Transaction = self.transaction_table.get(transaction_id)
         if not cur_transaction:
-            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+            raise InvalidCommandError("{} doesn't exist".format(transaction_id))
 
         # judge whether all relevant up sites can be written
         can_get_all_write_lock = True
@@ -206,7 +206,7 @@ class TransactionManager:
         """
         # Initialize this transaction with current timestamp and add it into transaction table.
         if self.transaction_table.get(transaction_id):
-            raise InvalidInstructionError("{} already begins".format(transaction_id))
+            raise InvalidCommandError("{} already begins".format(transaction_id))
         self.transaction_table[transaction_id] = Transaction(transaction_id, self.ts, is_read_only)
 
         # print transaction begin info
@@ -223,7 +223,7 @@ class TransactionManager:
         """
         cur_transaction: Transaction = self.transaction_table.get(transaction_id)
         if not cur_transaction:
-            raise InvalidInstructionError("{} doesn't exist".format(transaction_id))
+            raise InvalidCommandError("{} doesn't exist".format(transaction_id))
         if cur_transaction.should_abort:
             self.abort(cur_transaction.transaction_id)
         else:
@@ -247,10 +247,10 @@ class TransactionManager:
     def fail(self, site_id: int):
         """
         A site fail, all transactions which ever access this site should abort eventually
-        :param site_id: id of the site to abort
+        :param site_id: id of the site to fail
         """
         if not 1 <= site_id <= len(self.site_list):
-            raise InvalidInstructionError("try to fail site with id {}, which doesn't exist".format(site_id))
+            raise InvalidCommandError("try to fail site with id {}, which doesn't exist".format(site_id))
 
         site = self.site_list[site_id-1]
         site.fail(self.ts)
@@ -264,11 +264,18 @@ class TransactionManager:
                 print("Set transaction {}'s should_abort flag to True".format(transaction.transaction_id))
 
 
-    # Luo
-    # a site recover, do corresponding operations for related transactions
     def recover(self, site_id):
-        # call DM to do recovery operations in site
-        pass
+        """
+        A site fail, all transactions which ever access this site should abort eventually
+        :param site_id: id of the site to recover
+        :return:
+        """
+        if not 1 <= site_id <= len(self.site_list):
+            raise InvalidCommandError("try to recover site with id {}, which doesn't exist".format(site_id))
+
+        site = self.site_list[site_id-1]
+        site.recover(self.ts)
+        print("site {} recover at time {}".format(site_id, self.ts))
 
 
     # Luo

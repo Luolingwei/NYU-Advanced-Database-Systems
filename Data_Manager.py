@@ -1,4 +1,4 @@
-from Utils import Variable, CommitValue, TempValue, RW_Result
+from Utils import Variable, CommitValue, TempValue, RW_Result, InvalidCommandError
 from Locks import ReadLock, WriteLock, LockType, VarLockManager
 
 
@@ -194,23 +194,32 @@ class DataManager:
         pass
 
 
-    # a site fail, do corresponding operations in current site
-    def fail(self, fail_ts):
+    def fail(self, fail_ts: int):
         """
         A site fail, set site status to down and reset lock manager for all vars in this site
         :param fail_ts: fail timestamp of this site
         """
+        if not self.is_up:
+            raise InvalidCommandError("Trying to fail a down site!")
         self.is_up = False
         self.fail_time_list.append(fail_ts)
         for var_lock_manager in self.lock_table.values():
             var_lock_manager.reset()
 
 
-    # Luo
-    # a site recover, do corresponding operations in current site
-    def recover(self, recover_ts):
-        # Set site status to up
-        pass
+    def recover(self, recover_ts: int):
+        """
+        A site recover, set site status to down and set all replicated var to non-readable
+        :param recover_ts: recover timestamp of this site
+        """
+        if self.is_up:
+            raise InvalidCommandError("Trying to recover a up site!")
+        self.is_up = True
+        self.recover_time_list.append(recover_ts)
+        for variable in self.data_table.values():
+            # replicated variable (even index) not readable when site recover
+            if variable.is_replicated:
+                variable.is_readable = False
 
 
     # Fan
