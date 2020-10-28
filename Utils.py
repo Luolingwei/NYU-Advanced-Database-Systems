@@ -64,6 +64,13 @@ class Variable:
             raise RuntimeError("temp value of {} doesn't exist".format(self.variable_id))
         return self.temp_value.value
 
+    def add_commit_value(self, commit_value):
+        """
+        Append the CommitValue object at the end.
+        :param commit_value: a CommitValue object
+        """
+        self.commit_queue.append(commit_value)
+
 
 class RW_Result:
 

@@ -103,11 +103,18 @@ class DataManager:
             return RW_Result(True, variable.get_latest_commit_value())
 
 
-    # Fan
-    # a read-only transaction T want to read a snapshot of variable i from this site
-    def read_snapshot(self, transaction_id, variable_id):
-        # find the latest commit value of this variable before begin time of T in commit queue.
-        pass
+    def read_snapshot(self, variable_id ,ts):
+        v: Variable = self.data_table[variable_id]
+        if v.is_readable:
+            for commit_value in v.commit_queue:
+                # get the latest commit before begin
+                if commit_value.commit_ts <= ts:
+                    if v.is_replicated:
+                        for fail_ts in self.fail_time_list:
+                            if commit_value.commit_ts < fail_ts <= ts:
+                                return RW_Result(False)
+                    return RW_Result(True, commit_value.value)
+        return RW_Result(False)
 
 
     def can_get_write_lock(self, transaction_id: str, variable_id: str):
@@ -178,20 +185,33 @@ class DataManager:
         return RW_Result(True)
 
 
-    # Fan
-    # a transaction is aborted, do corresponding operations in current site
+
     def abort(self, transaction_id):
-        # release current locks and queued locks of this transaction,
+        # release current locks
+        for lockmgr in self.lock_table.values():
+            lockmgr.release_current_lock_by_transaction(transaction_id)
+            for locks in list(lockmgr.lock_queue):
+                if locks.transaction_ids == transaction_id:
+                    lockmgr.lock_queue.remove(locks)
         # update lock table.
-        pass
+        self.update_lock_table()
 
 
-    # Fan
-    # a transaction is committed, do corresponding operations in current site
-    def commit(self, transaction_id):
-        # Add all temp value of this transaction in this site to commit list, release all current and queued locks,
+
+    def commit(self, transaction_id, commit_ts):
+        # release locks for this transaction
+        for lockmgr in self.lock_table.values():
+            lockmgr.release_current_lock_by_transaction(transaction_id)
+            for locks in list(lockmgr.lock_queue):
+                if locks.transaction_ids == transaction_id:
+                    raise RuntimeError("{} cannot commit with unresolved locks.".format(transaction_id))
+        # update commit queue
+        for val in self.data_table.values():
+            if val.temp_value and val.temp_value.transaction_id == transaction_id:
+                val.add_commit_value(CommitValue(val.temp_value.value, commit_ts))
+                val.is_readable = True
         # update lock table.
-        pass
+        self.update_lock_table()
 
 
     def fail(self, fail_ts: int):
@@ -222,11 +242,31 @@ class DataManager:
                 variable.is_readable = False
 
 
-    # Fan
-    # update lock table to move queued lock
+
     def update_lock_table(self):
-        # After a transaction commit/abort, move possible queued lock to variable.
-        pass
+        # If the transaction has been aborted or committed, the related locks need to be moved
+        for val, lockmgr in self.lock_table.items():
+            if lockmgr.lock_queue:
+                if not lockmgr.cur_lock:
+                    first_lock = lockmgr.lock_queue.pop(0)
+                    if first_lock.lock_type == LockType.R:
+                        for trans_id in first_lock.transaction_ids:
+                            lockmgr.cur_lock = ReadLock(first_lock.variable_id,trans_id)
+                        for trans_id in first_lock.transaction_ids:
+                            lockmgr.share_read_lock(trans_id)
+                    else:
+                        lockmgr.cur_lock = WriteLock(first_lock.variable_id, first_lock.transaction_ids)
+
+                if lockmgr.cur_lock.lock_type == LockType.R:
+                    for locks in list(lockmgr.lock_queue):
+                        if locks.lock_type == LockType.W:
+                            if len(lockmgr.cur_lock.transaction_ids) == 1 and locks.transaction_ids in lockmgr.cur_lock.transaction_ids:
+                                # Promote the current lock from R-lock to W-lock
+                                lockmgr.promote_current_lock(WriteLock(locks.variable_id, locks.transaction_ids))
+                                lockmgr.lock_queue.remove(locks)
+                            break
+                        lockmgr.share_read_lock(locks.transaction_ids)
+                        lockmgr.lock_queue.remove(locks)
 
 
     def get_wait_for_graph(self):
