@@ -1,8 +1,8 @@
 import os
 from Transaction_Manager import TransactionManager
 
-if __name__ == '__main__':
 
+if __name__ == '__main__':
     # input_path = input("Please enter path of your test case folder \n")
     input_path = "test_cases"
     for file in os.listdir(input_path):

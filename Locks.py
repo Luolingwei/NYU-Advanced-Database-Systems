@@ -117,3 +117,38 @@ class VarLockManager:
         if self.cur_lock.lock_type != LockType.R:
             raise RuntimeError("Trying to share a write lock!!!")
         self.cur_lock.transaction_ids.add(transaction_id)
+
+
+    def release_current_lock_by_transaction(self, transaction_ids):
+        """
+        Release the current lock held by a transaction.
+        :param transaction_id: the id of the transaction
+        """
+        if self.cur_lock:
+            if self.cur_lock.lock_type == LockType.R:
+                # current lock is R-lock
+                if transaction_ids in self.cur_lock.transaction_ids:
+                    self.cur_lock.transaction_ids.remove(transaction_ids)
+                if not len(self.cur_lock.transaction_ids):
+                    # release when no other transaction holding R-lock
+                    self.cur_lock = None
+            else:
+                # current lock is W-lock
+                if self.cur_lock.transaction_ids == transaction_ids:
+                    self.cur_lock = None
+
+    def promote_current_lock(self, write_lock):
+        """
+        Promote the current lock from R-lock to W-lock for the same transaction.
+        :param write_lock: the new WriteLock
+        """
+        if not self.cur_lock:
+            raise RuntimeError("No current lock!")
+        if not self.cur_lock.lock_type == LockType.R:
+            raise RuntimeError("Current lock is not R-lock!")
+        if len(self.cur_lock.transaction_ids) != 1:
+            raise RuntimeError("Other transaction sharing R-lock!")
+        if write_lock.transaction_ids not in self.cur_lock.transaction_ids:
+            raise RuntimeError("{} is not holding current R-lock!".format(
+                write_lock.transaction_id))
+        self.cur_lock = write_lock

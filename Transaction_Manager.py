@@ -140,12 +140,27 @@ class TransactionManager:
         return False
 
 
-    #Fan
+
     # a read-only transaction T want to read a snapshot of variable i
     def read_snapshot(self, transaction_id, variable_id):
-        # call DM to read from any sites which have this variable,
-        # return True or False, which indicate whether this read is success or fail
-        return True
+        """
+        A transaction T want to read a variable i
+        Call DM to read from any sites which have this variable
+        :param transaction_id: id of this transaction
+        :param variable_id: id of variable which T wants to access
+        :return: True means read succeed, False means read fail
+        """
+        if not self.transaction_table.get(transaction_id):
+            raise InvalidCommandError("{} does not exist".format(transaction_id))
+
+        begin_ts = self.transaction_table[transaction_id].begin_ts
+        for site in self.site_list:
+            if site.is_up and site.has_variable(variable_id):
+                result = site.read_snapshot(variable_id, begin_ts)
+                if result.success:
+                    print("{} (RO) reads {}.{}: {}".format(transaction_id, variable_id, site.site_id, result.value))
+                    return True
+        return False
 
 
     def add_write_opration(self, transaction_id: str, variable_id: str, value: int):
@@ -227,21 +242,35 @@ class TransactionManager:
         if cur_transaction.should_abort:
             self.abort(cur_transaction.transaction_id)
         else:
-            self.commit(cur_transaction.transaction_id)
+            self.commit(cur_transaction.transaction_id, self.ts)
 
 
-    # Fan
-    # a transaction is about to abort, do corresponding operations
+
     def abort(self, transaction_id):
-        # call DM to abort this transaction, remove transaction id from transaction table in TM.
-        print("transaction {} abort".format(transaction_id))
+        """
+        call DM to abort this transaction
+        update the transaction table in TM.
+        :param transaction_id: id of this transaction
+        """
+        for site in self.site_list:
+            site.abort(transaction_id)
+        self.transaction_table.pop(transaction_id)
+        print("{} abort".format(transaction_id))
 
 
-    # Fan
-    # a transaction is about to commit, do corresponding operations
-    def commit(self, transaction_id):
-        # call DM to commit this transaction, remove transaction id from transaction table in TM.
-        print("transaction {} commit".format(transaction_id))
+
+    def commit(self, transaction_id, commit_ts):
+        '''
+        call DM to commit this transaction
+        update the transaction table in TM.
+        :param transaction_id: id of this transaction
+        :param commit_ts: timestamp when commit
+        '''
+        for site in self.site_list:
+            site.commit(transaction_id, commit_ts)
+        self.transaction_table.pop(transaction_id)
+        print("{} commits!".format(transaction_id))
+
 
 
     def fail(self, site_id: int):
@@ -270,6 +299,7 @@ class TransactionManager:
         :param site_id: id of the site to recover
         :return:
         """
+        site_id = int(site_id)
         if not 1 <= site_id <= len(self.site_list):
             raise InvalidCommandError("try to recover site with id {}, which doesn't exist".format(site_id))
 
