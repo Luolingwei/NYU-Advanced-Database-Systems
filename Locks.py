@@ -1,5 +1,6 @@
 from enum import Enum, unique
 from typing import List
+from collections import deque
 
 
 ############################################################
@@ -36,7 +37,7 @@ class Lock:
 
 class ReadLock(Lock):
 
-    def __init__(self, variable_id, transaction_id, is_queued = False):
+    def __init__(self, variable_id: str, transaction_id: str, is_queued = False):
         """
         Inherit from Lock
         :param variable_id: id of variable which this lock belongs to
@@ -49,7 +50,7 @@ class ReadLock(Lock):
 
 class WriteLock(Lock):
 
-    def __init__(self, variable_id, transaction_id, is_queued = False):
+    def __init__(self, variable_id: str, transaction_id: str, is_queued = False):
         """
         Inherit from Lock
         :param variable_id: id of variable which this lock belongs to
@@ -69,7 +70,7 @@ class VarLockManager:
         """
         self.variable_id = variable_id
         self.cur_lock: Lock = None # cuurent lock on this variable, can be ReadLock or WriteLock
-        self.lock_queue: List[Lock] = [] # a queue to store all failed attempted lock
+        self.lock_queue = deque() # a queue to store all failed attempted lock
 
 
     def reset(self):
@@ -78,7 +79,7 @@ class VarLockManager:
         :return:
         """
         self.cur_lock = None
-        self.lock_queue = []
+        self.lock_queue = deque()
 
 
     def has_queued_write_lock(self, exclude_transaction_id = None):
@@ -110,7 +111,7 @@ class VarLockManager:
         self.lock_queue.append(lock_to_add)
 
 
-    def share_read_lock(self, transaction_id):
+    def share_read_lock(self, transaction_id: str):
         """
         A transaction share this lock with other existing transactions
         :param transaction_id: newly joined transaction
@@ -120,36 +121,24 @@ class VarLockManager:
         self.cur_lock.transaction_ids.add(transaction_id)
 
 
-    def release_current_lock_by_transaction(self, transaction_ids):
+    def release_lock_held_by_transaction(self, transaction_id: str):
         """
-        Release the current lock held by a transaction.
+        Release all current lock held by a transaction.
         :param transaction_id: the id of the transaction
         """
-        if self.cur_lock:
-            if self.cur_lock.lock_type == LockType.R:
-                # current lock is R-lock
-                if transaction_ids in self.cur_lock.transaction_ids:
-                    self.cur_lock.transaction_ids.remove(transaction_ids)
-                if not len(self.cur_lock.transaction_ids):
-                    # release when no other transaction holding R-lock
-                    self.cur_lock = None
-            else:
-                # current lock is W-lock
-                if self.cur_lock.transaction_ids == transaction_ids:
-                    self.cur_lock = None
+        # No current lock
+        if not self.cur_lock: return
 
-    def promote_current_lock(self, write_lock):
-        """
-        Promote the current lock from R-lock to W-lock for the same transaction.
-        :param write_lock: the new WriteLock
-        """
-        if not self.cur_lock:
-            raise RuntimeError("No current lock!")
-        if not self.cur_lock.lock_type == LockType.R:
-            raise RuntimeError("Current lock is not R-lock!")
-        if len(self.cur_lock.transaction_ids) != 1:
-            raise RuntimeError("Other transaction sharing R-lock!")
-        if write_lock.transaction_ids not in self.cur_lock.transaction_ids:
-            raise RuntimeError("{} is not holding current R-lock!".format(
-                write_lock.transaction_id))
-        self.cur_lock = write_lock
+        # current lock is read lock
+        if self.cur_lock.lock_type == LockType.R:
+
+            if transaction_id in self.cur_lock.transaction_ids:
+                self.cur_lock.transaction_ids.remove(transaction_id)
+            # current lock has become empty, release it
+            if len(self.cur_lock.transaction_ids) == 0:
+                self.cur_lock = None
+
+        # current lock is write lock
+        else:
+            if self.cur_lock.transaction_ids == transaction_id:
+                self.cur_lock = None

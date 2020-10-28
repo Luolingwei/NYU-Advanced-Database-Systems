@@ -10,7 +10,7 @@ if __name__ == '__main__':
         cur_file = input_path + '/' + file
         f = open(cur_file, "r")
         print("\n")
-        print("Reading from " + cur_file + "...")
+        print("Reading from " + cur_file + "..." + "\n")
 
         # begin to process commands in 1 input file
         ts_manager = TransactionManager()
@@ -19,7 +19,7 @@ if __name__ == '__main__':
             if line and not line.startswith(("#","//")):
                 ts_manager.process_line(line)
 
-        ts_manager.dump()
+        # ts_manager.dump()
 
         # print(ts_manager.transaction_table)
 

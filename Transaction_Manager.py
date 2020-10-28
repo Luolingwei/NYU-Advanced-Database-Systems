@@ -37,10 +37,12 @@ class TransactionManager:
         paras = re.findall(r"[\w']+", line)
         # print(paras)
         command = paras.pop(0)
-        print("processing instruction {}({})".format(command,paras))
+
         # if there is deadlock detected, we will execute operation queue once more, as deadlock has been cleaned, may succeed now
         if self.solve_deadlock():
+            print("Execute operation set again due to deadlock solve")
             self.execute_operations()
+        print("processing instruction {}({})".format(command,paras))
         self.process_command(command, paras)
         self.execute_operations()
         self.ts += 1 # a newline in the input means time advances by one
@@ -61,8 +63,7 @@ class TransactionManager:
         elif command == "W":
             self.add_write_opration(paras[0],paras[1],int(paras[2]))
         elif command == "dump":
-            # self.dump()
-            pass
+            self.dump()
         elif command == "end":
             self.end(paras[0])
         elif command == "fail":
@@ -86,6 +87,7 @@ class TransactionManager:
             # first judge whether the transaction containing this op still exist
             if not cur_transaction:
                 self.operation_set.remove(operation)
+                print("Removed operation: {} [removed], Remaining operations: {}".format(operation, self.operation_set))
                 continue
             if operation.command == OperationType.R:
                 if cur_transaction.is_read_only:
@@ -159,9 +161,9 @@ class TransactionManager:
         begin_ts = self.transaction_table[transaction_id].begin_time
         for site in self.site_list:
             if site.is_up and site.has_variable(variable_id):
-                result = site.read_snapshot(variable_id, begin_ts)
-                if result.success:
-                    print("{} (RO) reads {}.{}: {}".format(transaction_id, variable_id, site.site_id, result.value))
+                return_result = site.read_snapshot(variable_id, begin_ts)
+                if return_result.success:
+                    print("{} (read-only) successfully read {} from site {}, return {}".format(transaction_id, variable_id, site.site_id, return_result.value))
                     return True
         return False
 
@@ -229,9 +231,9 @@ class TransactionManager:
 
         # print transaction begin info
         if is_read_only:
-            print("read-only transaction {} begins".format(transaction_id))
+            print("read-only transaction {} begins \n".format(transaction_id))
         else:
-            print("transaction {} begins".format(transaction_id))
+            print("transaction {} begins \n".format(transaction_id))
 
 
     def end(self, transaction_id: str):
@@ -248,32 +250,29 @@ class TransactionManager:
             self.commit(cur_transaction.transaction_id, self.ts)
 
 
-
-    def abort(self, transaction_id):
+    def abort(self, transaction_id: str):
         """
-        call DM to abort this transaction
+        Call DM to abort this transaction
         update the transaction table in TM.
         :param transaction_id: id of this transaction
         """
         for site in self.site_list:
             site.abort(transaction_id)
         self.transaction_table.pop(transaction_id)
-        print("{} abort".format(transaction_id))
+        print("{} abort \n".format(transaction_id))
 
 
-
-    def commit(self, transaction_id, commit_ts):
-        '''
-        call DM to commit this transaction
+    def commit(self, transaction_id: str, commit_ts: int):
+        """
+        Call DM to commit this transaction
         update the transaction table in TM.
         :param transaction_id: id of this transaction
-        :param commit_ts: timestamp when commit
-        '''
+        :param commit_ts: timestamp of this commit
+        """
         for site in self.site_list:
             site.commit(transaction_id, commit_ts)
         self.transaction_table.pop(transaction_id)
-        print("{} commits!".format(transaction_id))
-
+        print("{} commit \n".format(transaction_id))
 
 
     def fail(self, site_id: int):
@@ -308,7 +307,7 @@ class TransactionManager:
 
         site = self.site_list[site_id-1]
         site.recover(self.ts)
-        print("site {} recover at time {}".format(site_id, self.ts))
+        print("site {} recover at time {} \n".format(site_id, self.ts))
 
 
     def solve_deadlock(self):
@@ -334,7 +333,7 @@ class TransactionManager:
                 for node, wait_set in cur_graph.items():
                     global_graph[node] |= wait_set
 
-        if len(global_graph.keys())>0: print("current global wait-for graph is {}".format(global_graph))
+        if len(global_graph.keys())>0: print("current global wait-for graph is {} \n".format(global_graph))
         # detect possible cycle in global graph
         youngest_transaction = None
         for start_node in list(global_graph.keys()):
