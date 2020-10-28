@@ -1,10 +1,10 @@
+from collections import defaultdict
 from Utils import Variable, CommitValue, TempValue, RW_Result, InvalidCommandError
 from Locks import ReadLock, WriteLock, LockType, VarLockManager
 
 
 # A DataManager represents a site, where all variables and locks would be stored here.
 class DataManager:
-
 
     def __init__(self, site_id: int):
         """
@@ -58,7 +58,7 @@ class DataManager:
         print(lock_info)
 
 
-    def read(self, transaction_id, variable_id):
+    def read(self, transaction_id: str, variable_id: str):
         """
         A transaction T want to read a variable i from this site
         First judge the current lock type on this variable, then try to get read lock of this variable
@@ -165,7 +165,7 @@ class DataManager:
             return True
 
 
-    def write(self, transaction_id, variable_id, value):
+    def write(self, transaction_id: str, variable_id: str, value: int):
         """
         A transaction T want to write a variable i to value V in this site
         As write operation would be first judged by can_get_write_lock, so when we do write,
@@ -269,9 +269,46 @@ class DataManager:
                         lockmgr.lock_queue.remove(locks)
 
 
-    # Luo
-    # return this site’s wait for graph for cycle detaction
-    def get_blocking_graph(self):
-        # output a waits-for all variables in current site
-        pass
+    def get_wait_for_graph(self):
+        """
+        Calculate all wait-for relations in this site
+        including wait-for between (1) current lock and queued lock, (2) queued lock and queued lock
+        :return: return this site’s wait for graph for cycle detection
+        """
 
+        def check(lock_left, lock_right):
+            # lock_left is read lock
+            if lock_left.lock_type == LockType.R:
+                # lock_right is write lock but not the same transaction id, which will cause wait
+                if lock_right.lock_type == LockType.W and \
+                        {lock_right.transaction_ids} != lock_left.transaction_ids:
+                    wait_for_graph[lock_right.transaction_ids] |= lock_left.transaction_ids
+
+            # lock_left is write lock
+            else:
+                # only need to judge whether the 2 transaction id is the same, if not, will cause wait
+                # lock_left is write lock, lock_right is read lock (queued read lock can only have 1 T shared)
+                if lock_right.lock_type == LockType.R and lock_left.transaction_ids not in lock_right.transaction_ids:
+                    wait_for_graph[list(lock_right.transaction_ids)[0]].add(lock_left.transaction_ids)
+                # lock_left is write lock, lock_right is write lock
+                elif lock_right.lock_type == LockType.W and lock_left.transaction_ids != lock_right.transaction_ids:
+                    wait_for_graph[lock_right.transaction_ids].add(lock_left.transaction_ids)
+
+        wait_for_graph = defaultdict(set)
+
+        for var_lock_manager in self.lock_table.values():
+            current_lock = var_lock_manager.cur_lock
+            lock_queue = var_lock_manager.lock_queue
+
+            if current_lock:
+                # Calculate wait-for between current lock and queued lock
+                for queued_lock in var_lock_manager.lock_queue:
+                    check(current_lock, queued_lock)
+            if lock_queue:
+                # Calculate wait-for between queued lock and queued lock
+                for j in range(len(lock_queue)):
+                    for i in range(j):
+                        check(lock_queue[i],lock_queue[j])
+
+        if len(wait_for_graph.keys())>0: print("wait-for graph for site {}: {}".format(self.site_id, wait_for_graph))
+        return wait_for_graph

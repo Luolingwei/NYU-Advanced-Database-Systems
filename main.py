@@ -20,4 +20,6 @@ if __name__ == '__main__':
                 ts_manager.process_line(line)
 
         ts_manager.dump()
+
         # print(ts_manager.transaction_table)
+

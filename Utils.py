@@ -89,7 +89,7 @@ class RW_Result:
 #####################################################################
 
 class InvalidCommandError(Exception):
-    """Error thrown for invalid instructions"""
+    """Error thrown for invalid commands"""
 
     def __init__(self, message):
         self.message = message
@@ -129,15 +129,15 @@ class Operation:
 
 class Transaction:
 
-    def __init__(self, transaction_id: str, begin_ts: int, is_read_only: bool):
+    def __init__(self, transaction_id: str, begin_time: int, is_read_only: bool):
         """
         Initialize a Transaction
         :param transaction_id: id of this transaction
-        :param begin_ts: begin timestamp of this transaction
+        :param begin_time: begin timestamp of this transaction
         :param is_read_only: indicate whether this is a read-only transaction
         """
         self.transaction_id = transaction_id
-        self.begin_ts = begin_ts
+        self.begin_time = begin_time
         self.is_read_only = is_read_only
         self.should_abort = False
         self.site_access_list = []
@@ -148,6 +148,6 @@ class Transaction:
         Output transaction object info
         """
         if self.is_read_only:
-            return "[{}, begin at {}, read-only]".format(self.transaction_id, self.begin_ts)
+            return "[{}, begin at {}, read-only]".format(self.transaction_id, self.begin_time)
         else:
-            return "[{}, begin at {}]".format(self.transaction_id, self.begin_ts)
+            return "[{}, begin at {}]".format(self.transaction_id, self.begin_time)
