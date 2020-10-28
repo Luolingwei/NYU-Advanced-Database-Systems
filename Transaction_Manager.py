@@ -156,7 +156,7 @@ class TransactionManager:
         if not self.transaction_table.get(transaction_id):
             raise InvalidCommandError("{} does not exist".format(transaction_id))
 
-        begin_ts = self.transaction_table[transaction_id].begin_ts
+        begin_ts = self.transaction_table[transaction_id].begin_time
         for site in self.site_list:
             if site.is_up and site.has_variable(variable_id):
                 result = site.read_snapshot(variable_id, begin_ts)
