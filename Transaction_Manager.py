@@ -1,12 +1,12 @@
+import re
+from collections import defaultdict
 from typing import List
 from Utils import InvalidCommandError, OperationType, Operation, Transaction
-import re
 from Data_Manager import DataManager
 
 
 # Transaction Manager is used to process all instructions and conduct corresponding operations for various transactions
 class TransactionManager:
-
 
     def __init__(self):
         """
@@ -38,6 +38,9 @@ class TransactionManager:
         # print(paras)
         command = paras.pop(0)
         print("processing instruction {}({})".format(command,paras))
+        # if there is deadlock detected, we will execute operation queue once more, as deadlock has been cleaned, may succeed now
+        if self.solve_deadlock():
+            self.execute_operations()
         self.process_command(command, paras)
         self.execute_operations()
         self.ts += 1 # a newline in the input means time advances by one
@@ -65,7 +68,7 @@ class TransactionManager:
         elif command == "fail":
             self.fail(int(paras[0]))
         elif command == "recover":
-            self.recover(paras[0])
+            self.recover(int(paras[0]))
         else:
             raise InvalidCommandError("Unknown Instruction: " + command)
 
@@ -264,7 +267,7 @@ class TransactionManager:
                 print("Set transaction {}'s should_abort flag to True".format(transaction.transaction_id))
 
 
-    def recover(self, site_id):
+    def recover(self, site_id: int):
         """
         A site fail, all transactions which ever access this site should abort eventually
         :param site_id: id of the site to recover
@@ -278,8 +281,44 @@ class TransactionManager:
         print("site {} recover at time {}".format(site_id, self.ts))
 
 
-    # Luo
-    # return this site’s wait for graph for cycle detection
     def solve_deadlock(self):
-        # collect waits-for graphs from all sites, then abort youngest transaction if there is a cycle.
-        pass
+        """
+        Detect global deadlock and solve by aborting youngest transaction
+        :return: True means deadlock detected, a transaction is aborted. False means no deadlock and no action happened.
+        """
+
+        # check whether we can start from node and return to same node
+        def dfs(node, target):
+            if len(visited)!= 0 and node == target: return True
+            for nei in global_graph[node]:
+                if nei not in visited:
+                    visited.add(nei)
+                    if dfs(nei, target): return True
+            return False
+
+        # collect waits-for graphs from all sites
+        global_graph = defaultdict(set)
+        for site in self.site_list:
+            if site.is_up:
+                cur_graph = site.get_wait_for_graph()
+                for node, wait_set in cur_graph.items():
+                    global_graph[node] |= wait_set
+
+        if len(global_graph.keys())>0: print("current global wait-for graph is {}".format(global_graph))
+        # detect possible cycle in global graph
+        youngest_transaction = None
+        for start_node in list(global_graph.keys()):
+            visited = set()
+            # if we can start from this node and return to this node, this node is a member of cycle
+            if dfs(start_node, start_node):
+                transaction_in_cycle : Transaction = self.transaction_table[start_node]
+                if not youngest_transaction or transaction_in_cycle.begin_time > youngest_transaction.begin_time:
+                    youngest_transaction = transaction_in_cycle
+
+        # youngest_transaction found, abort it
+        if youngest_transaction:
+            print("Detected deadlock, abort transaction {}".format(youngest_transaction.transaction_id))
+            self.abort(youngest_transaction.transaction_id)
+            return True
+        return False
+

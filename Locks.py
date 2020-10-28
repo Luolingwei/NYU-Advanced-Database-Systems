@@ -1,4 +1,5 @@
 from enum import Enum, unique
+from typing import List
 
 
 ############################################################
@@ -43,7 +44,7 @@ class ReadLock(Lock):
         :param is_queued: indicate whether this lock is in lock_queue of VarLockManager
         """
         super().__init__(variable_id, is_queued, LockType.R)
-        self.transaction_ids = {transaction_id} # Read Lock can be shared by multiple transactions
+        self.transaction_ids = {transaction_id} # Read Lock can be shared by multiple transactions, so use set here
 
 
 class WriteLock(Lock):
@@ -56,7 +57,7 @@ class WriteLock(Lock):
         :param is_queued: indicate whether this lock is in lock_queue of VarLockManager
         """
         super().__init__(variable_id, is_queued, LockType.W)
-        self.transaction_ids = transaction_id # There can only be 1 Write lock on 1 var
+        self.transaction_ids = transaction_id # There can only be 1 Write lock on 1 var, so didn't use set
 
 
 class VarLockManager:
@@ -68,7 +69,7 @@ class VarLockManager:
         """
         self.variable_id = variable_id
         self.cur_lock: Lock = None # cuurent lock on this variable, can be ReadLock or WriteLock
-        self.lock_queue = [] # a queue to store all failed attempted lock
+        self.lock_queue: List[Lock] = [] # a queue to store all failed attempted lock
 
 
     def reset(self):
