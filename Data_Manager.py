@@ -289,18 +289,20 @@ class DataManager:
                 if lock_mgr.cur_lock.lock_type == LockType.R:
                     while lock_mgr.lock_queue:
                         # fetch queued lock one by one
-                        lock = lock_mgr.lock_queue.popleft()
+                        next_lock = lock_mgr.lock_queue[0]
                         # successive read lock, can share
-                        if lock.lock_type == LockType.R:
-                            lock_mgr.share_read_lock(lock.transaction_ids)
+                        if next_lock.lock_type == LockType.R:
+                            lock_mgr.share_read_lock(list(next_lock.transaction_ids)[0])
+                            lock_mgr.lock_queue.popleft()
                         # once we meet write lock, share have to stop, as read lock can not skip write lock in queue
-                        elif lock.lock_type == LockType.W:
+                        elif next_lock.lock_type == LockType.W:
                             # now check whether the read lock has not been shared, if so, it's possible to promote
-                            if len(lock_mgr.cur_lock.transaction_ids) == 1 and lock.transaction_ids in lock_mgr.cur_lock.transaction_ids:
+                            if len(lock_mgr.cur_lock.transaction_ids) == 1 and next_lock.transaction_ids in lock_mgr.cur_lock.transaction_ids:
                                 # the current lock is read lock and has same transaction id with later write lock, promote
                                 # set this write lock as current lock
-                                lock.is_queued = False
-                                lock_mgr.cur_lock = lock
+                                next_lock.is_queued = False
+                                lock_mgr.cur_lock = next_lock
+                                lock_mgr.lock_queue.popleft()
                             # stop scanning
                             break
 

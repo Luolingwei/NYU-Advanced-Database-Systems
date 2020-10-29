@@ -301,7 +301,6 @@ class TransactionManager:
         :param site_id: id of the site to recover
         :return:
         """
-        site_id = int(site_id)
         if not 1 <= site_id <= len(self.site_list):
             raise InvalidCommandError("try to recover site with id {}, which doesn't exist".format(site_id))
 
