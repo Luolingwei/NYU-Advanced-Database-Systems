@@ -1,0 +1,17 @@
+# Test 9
+// T2's first read for x5 return 50
+// T1's write to x5 will succeed, as read-only T2 will Not hold lock on x5
+// T2's second read for x5 still return 50, as it's read-only
+
+begin(T1)
+beginRO(T2)
+R(T2,x5)
+W(T1,x5,500)
+end(T1)
+R(T2,x5)
+end(T2)
+dump()
+
+// Final status of dump
+// x5: 500 at site 6
+// Other variables will not be changed (initial value).

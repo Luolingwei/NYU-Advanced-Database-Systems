@@ -1,16 +1,17 @@
-// Test 1.
-// T2 should abort, T1 should not, because of kill youngest
+# Test 1
+// T1 wait for T2, T2 wait for T1
+// T2 will abort, as T2 is younger than T1
 
 begin(T1)
 begin(T2)
-W(T1,x1,101)
-W(T2,x2,202)
-W(T1,x2,102)
-W(T2,x1,201)
+W(T1,x1,100)
+W(T2,x2,2000)
+W(T1,x2,200)
+W(T2,x1,1000)
 end(T1)
 dump()
 
-// === output of dump
-// x1: 101 at site 2
-// x2: 102 at all sites
-// All other variables have their initial values.
+// Final status of dump
+// x1: 100 at site 2.
+// x2: 200 at all sites.
+// Other variables will not be changed (initial value).

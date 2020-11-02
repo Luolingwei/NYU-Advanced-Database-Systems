@@ -28,7 +28,6 @@ class TransactionManager:
             site.dump()
 
 
-    # process a line from input file
     def process_line(self, line: str):
         """
         Parse a line and pass all paras to process_command
@@ -145,8 +144,6 @@ class TransactionManager:
         return False
 
 
-
-    # a read-only transaction T want to read a snapshot of variable i
     def read_snapshot(self, transaction_id, variable_id):
         """
         A transaction T want to read a variable i
@@ -349,4 +346,3 @@ class TransactionManager:
             self.abort(youngest_transaction.transaction_id)
             return True
         return False
-

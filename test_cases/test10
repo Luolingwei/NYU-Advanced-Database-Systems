@@ -1,0 +1,18 @@
+# Test 10
+// T2's read for x5 will return 50, as it begin very early
+// T3's read for x5 will return 500, as it begin after T1's write
+
+begin(T1)
+beginRO(T2)
+W(T1,x5,500)
+end(T1)
+beginRO(T3)
+R(T3,x5)
+R(T2,x5)
+end(T2)
+end(T3)
+dump()
+
+// Final status of dump
+// x5: 500 at site 6
+// Other variables will not be changed (initial value).

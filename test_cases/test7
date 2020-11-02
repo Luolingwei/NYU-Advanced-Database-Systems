@@ -1,0 +1,21 @@
+# Test 7
+// T2 will write x6 to all sites except site 1,2
+// T1's read for x1 will succeed when site 2 recover
+// T2's read for x4 will not from site 1/2, as even index var is not readable on recovery
+
+begin(T1)
+begin(T2)
+fail(1)
+fail(2)
+R(T1,x1)
+W(T2,x6,600)
+recover(1)
+recover(2)
+R(T2,x4)
+end(T1)
+end(T2)
+dump()
+
+// Final status of dump
+// x6: 600 at all sites except site 1,2, as they failed before write.
+// Other variables will not be changed (initial value).
