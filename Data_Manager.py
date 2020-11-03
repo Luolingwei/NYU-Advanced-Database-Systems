@@ -229,9 +229,9 @@ class DataManager:
             for lock in lock_mgr.lock_queue:
                 # queued lock can only have 1 transaction on it
                 if lock.lock_type == LockType.R and transaction_id in lock.transaction_ids:
-                    raise RuntimeError("{} cannot commit with queued locks".format(transaction_id))
+                    raise RuntimeError("{} cannot commit with queued locks: {}".format(transaction_id, lock))
                 if lock.lock_type == LockType.W and transaction_id == lock.transaction_ids:
-                    raise RuntimeError("{} cannot commit with queued locks".format(transaction_id))
+                    raise RuntimeError("{} cannot commit with queued locks: {}".format(transaction_id, lock))
 
         # update commit queue
         for variable in self.data_table.values():
@@ -320,7 +320,8 @@ class DataManager:
                 # lock_right is write lock but not the same transaction id, which will cause wait
                 if lock_right.lock_type == LockType.W and \
                         {lock_right.transaction_ids} != lock_left.transaction_ids:
-                    wait_for_graph[lock_right.transaction_ids] |= lock_left.transaction_ids
+                    # only add transaction ids which != write lock's transaction id on the right side
+                    wait_for_graph[lock_right.transaction_ids] |= {id for id in lock_left.transaction_ids if id!=lock_right.transaction_ids}
 
             # lock_left is write lock
             else:

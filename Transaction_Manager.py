@@ -15,7 +15,7 @@ class TransactionManager:
         """
         self.ts = 0 # record current timestamp
         self.transaction_table = {} # transaction table to record all transactions, {transaction_id: Transaction}
-        self.operation_set = set() # all operations which wait to be executed, Read/Write
+        self.operation_list = [] # all operations which wait to be executed, Read/Write, order of ops should be retained
         self.site_list = [DataManager(site_id) for site_id in range(1,11)] # list of all sites
 
 
@@ -79,14 +79,14 @@ class TransactionManager:
         If an execution succeed, remove it from set, otherwise let it remain there
         :return:
         """
-        if self.operation_set: print("==================================")
+        if self.operation_list: print("==================================")
         success = None
-        for operation in list(self.operation_set): # operation_set can not be changed during iteration
+        for operation in list(self.operation_list): # operation_list can not be changed during iteration
             cur_transaction: Transaction = self.transaction_table.get(operation.transaction_id)
             # first judge whether the transaction containing this op still exist
             if not cur_transaction:
-                self.operation_set.remove(operation)
-                print("Removed operation: {} [removed], Remaining operations: {}".format(operation, self.operation_set))
+                self.operation_list.remove(operation)
+                print("Removed operation: {} [removed], Remaining operations: {}".format(operation, self.operation_list))
                 continue
             if operation.command == OperationType.R:
                 if cur_transaction.is_read_only:
@@ -100,11 +100,11 @@ class TransactionManager:
 
             # Read/Write succeed, remove this operation from operation set
             if success:
-                self.operation_set.remove(operation)
+                self.operation_list.remove(operation)
 
             # Output execution info
             status = "success" if success else "fail"
-            print("Executed operation: {} [{}], Remaining operations: {}".format(operation, status, self.operation_set))
+            print("Executed operation: {} [{}], Remaining operations: {}".format(operation, status, self.operation_list))
 
         if success!=None: print("")
 
@@ -117,7 +117,7 @@ class TransactionManager:
         """
         if not self.transaction_table.get(transaction_id):
             raise InvalidCommandError("{} doesn't exist".format(transaction_id))
-        self.operation_set.add(Operation(OperationType.R, transaction_id, variable_id))
+        self.operation_list.append(Operation(OperationType.R, transaction_id, variable_id))
 
 
     def read(self, transaction_id: str, variable_id: str):
@@ -174,7 +174,7 @@ class TransactionManager:
         """
         if not self.transaction_table.get(transaction_id):
             raise InvalidCommandError("{} doesn't exist".format(transaction_id))
-        self.operation_set.add(Operation(OperationType.W, transaction_id, variable_id, value))
+        self.operation_list.append(Operation(OperationType.W, transaction_id, variable_id, value))
 
 
     def write(self, transaction_id: str, variable_id: str, value: int):
@@ -289,7 +289,7 @@ class TransactionManager:
                 continue
             if site_id in transaction.site_access_list:
                 transaction.should_abort = True
-                print("Set transaction {}'s should_abort flag to True".format(transaction.transaction_id))
+                print("Set transaction {}'s should_abort flag to True\n".format(transaction.transaction_id))
 
 
     def recover(self, site_id: int):

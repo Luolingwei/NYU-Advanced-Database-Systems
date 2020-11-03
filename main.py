@@ -12,7 +12,7 @@ if __name__ == '__main__':
     #     print("\n")
     #     print("Reading from " + cur_file + "..." + "\n")
 
-    f = open("test_cases/test10", "r")
+    f = open("test_cases/test1", "r")
     # begin to process commands in 1 input file
     ts_manager = TransactionManager()
     for line in f.readlines():
