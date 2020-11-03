@@ -1,6 +1,6 @@
 # Test 20
 // Inspired by previous students
-// In this case, site 2-9 fail, site 1 fail and then recover.
+// In this case, site 2-9 fail, site 1 fail and then recover
 // x2 can only be read from site 1, but it's not readable because recovery
 // so R(T1,x2) will fail, W(T2,x2,200) can get all write lock. (although only from site 1)
 // write succeed, T1, T2 will commit
@@ -18,10 +18,8 @@ fail(7)
 fail(8)
 fail(9)
 fail(10)
-R(T1,x2) // T2 can't read x2 from site 1,
-// but doesn't hold a lock on x2 at site 1
-W(T2,x2,200) // T5 doesn't need to wait because T2 doesn't acquire a lock
-// since site 1 can't respond to the read.
+R(T1,x2)
+W(T2,x2,200)
 end(T1)
 end(T2)
 dump()
