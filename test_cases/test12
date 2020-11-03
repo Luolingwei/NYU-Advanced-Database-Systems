@@ -1,0 +1,16 @@
+# Test 12
+// Before T1 end, T2's write will wait because of T1+T2's shared read lock
+// T2's first read for x3 will return 30, while T2's second read for x3 will return 300
+
+begin(T1)
+begin(T2)
+R(T1,x3)
+R(T2,x3)
+W(T2,x3,300)
+end(T1)
+R(T2,x3)
+end(T2)
+
+// Final status of dump
+// x3: 300 at site 4
+// Other variables will not be changed (initial value).

@@ -1,0 +1,22 @@
+# Test 11
+// T3 wait for T2, T1 wait for T3
+// T3's read for x6 will succeed when T2 end, return 600
+// T1's read for x4 will succeed when T3 end, return 400
+// all transactions commit
+
+begin(T1)
+begin(T2)
+begin(T3)
+W(T3,x4,400)
+W(T2,x6,600)
+R(T3,x6)
+R(T1,x4)
+end(T2)
+end(T3)
+end(T1)
+dump()
+
+// Final status of dump
+// x4: 400 at all sites
+// x6: 600 at all sites
+// Other variables will not be changed (initial value).

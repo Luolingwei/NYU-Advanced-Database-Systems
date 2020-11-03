@@ -1,0 +1,22 @@
+# Test 17
+// T1 will wait for T2, T2 will NOT abort as it commit before site fail
+// when T2 end, T1's read for x5 will succeed, return 500
+// fail(6) cause T1 to abort, as it read x5 from site 6
+// T3's read for x2 will return 20 because T1 abort
+
+begin(T1)
+begin(T2)
+begin(T3)
+W(T1,x2,200)
+W(T2,x5,500)
+R(T1,x5)
+end(T2)
+fail(6)
+end(T1)
+R(T3,x2)
+end(T3)
+dump()
+
+// Final status of dump
+// x5: 500 at site 6 [DOWN]
+// Other variables will not be changed (initial value).

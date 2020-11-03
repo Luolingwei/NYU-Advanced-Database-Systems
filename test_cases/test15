@@ -1,0 +1,16 @@
+# Test 15
+// T2 will wait for T1
+// when T1 end, T2 will execute read(x2), return 2000, then write(x2)
+
+begin(T1)
+begin(T2)
+W(T1,x2,2000)
+R(T2,x2)
+W(T2,x2,20000)
+end(T1)
+end(T2)
+dump()
+
+// Final status of dump
+// x2: 20000 at all sites
+// Other variables will not be changed (initial value).

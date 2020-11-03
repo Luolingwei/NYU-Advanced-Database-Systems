@@ -1,0 +1,32 @@
+# Test 19
+// No deadlock because of site fail
+// T1 will abort because it read x1 from failed site 2
+// T1 -> T2, T2 -> T3, T3 -> T4, NO T4 -> T1, as T1's lock info is lost when site fail
+// T4 will write directly to x1
+// T2, T3, T4 will commit
+
+begin(T1)
+begin(T2)
+begin(T3)
+begin(T4)
+R(T1,x1)
+fail(2)
+recover(2)
+R(T2,x2)
+R(T3,x3)
+R(T4,x4)
+W(T1,x2,200)
+W(T2,x3,300)
+W(T3,x4,400)
+W(T4,x1,100)
+end(T4)
+end(T3)
+end(T2)
+end(T1)
+dump()
+
+// Final status of dump
+// x1: 100 at site 2
+// x3: 300 at site 4
+// x4: 400 at all sites
+// Other variables will not be changed (initial value).

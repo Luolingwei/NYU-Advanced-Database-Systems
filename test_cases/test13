@@ -1,0 +1,19 @@
+# Test 13
+// Initially, T2 wait for T1, T3 wait for T1+T2
+// when T1 end, T2 write succeed
+// when T2 end, T3 write succeed
+
+begin(T1)
+begin(T2)
+begin(T3)
+W(T1,x4,400)
+W(T2,x4,4000)
+W(T3,x4,40000)
+end(T1)
+end(T2)
+end(T3)
+dump()
+
+// Final status of dump
+// x4: 40000 at all sites
+// Other variables will not be changed (initial value).

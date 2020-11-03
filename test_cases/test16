@@ -1,0 +1,19 @@
+# Test 16
+// T2 will wait for T1
+// but W(T1,x2,20000) can skip R(T2,x2) as T1 is holding write lock on x2
+// R(T1,x2) will return 20000, which is temp value written by T1
+// when T1 end, R(T2,x2) can return 20000
+
+begin(T1)
+begin(T2)
+W(T1,x2,2000)
+R(T2,x2)
+W(T1,x2,20000)
+R(T1,x2)
+end(T1)
+end(T2)
+dump()
+
+// Final status of dump
+// x2: 20000 at all sites
+// Other variables will not be changed (initial value).
