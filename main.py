@@ -26,4 +26,4 @@ if __name__ == '__main__':
         if line.strip() == "exit":
             break
         ts_manager .process_line(line)
-        
+
