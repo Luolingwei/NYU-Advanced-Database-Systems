@@ -1,21 +1,12 @@
 # Test 2
-// No transaction abort, both T1, T2 will commit
-// T1, T2 will share read lock on x3
-// T1 will write x4 to all sites except site 3
-
 begin(T1)
-begin(T2)
-R(T1,x3)
-fail(3)
-W(T2,x6,600)
-R(T2,x3)
-W(T1,x4,400)
-end(T2)
-recover(3)
+beginRO(T2)
+W(T1,x1,101)
+R(T2,x2)
+W(T1,x2,102)
+R(T2,x1)
 end(T1)
+end(T2)
 dump()
 
-// Final status of dump
-// x4: 400 at all sites except site 3, as it failed before write.
-// x6: 600 at all sites except site 3, as it failed before write.
-// Other variables will not be changed (initial value).
+

@@ -1,22 +1,11 @@
-# Test 14
-// T1 will abort in the end because it write x3 to failed site 4
-// when site 4 recover, lock info will lose, so T2 can write to x3
-// T3 will wait for T2, when T2 end, T3's write succeed
-// In this case, no transaction wait for T1, as it's lock info is lost when site fail
-
+// Test 14
+// They wait in different orders from in the above test, but they all commit
 begin(T1)
 begin(T2)
 begin(T3)
-W(T1,x3,300)
-fail(4)
-W(T2,x3,3000)
-recover(4)
-W(T3,x3,30000)
-end(T2)
+W(T3,x2,10)
+W(T1,x2,10)
+W(T2,x2,10)
 end(T3)
 end(T1)
-dump()
-
-// Final status of dump
-// x3: 30000 at site 4
-// Other variables will not be changed (initial value).
+end(T2)

@@ -1,13 +1,12 @@
-# Test 20
-// Inspired by previous students
-// In this case, site 2-9 fail, site 1 fail and then recover
-// x2 can only be read from site 1, but it's not readable because recovery
-// so R(T1,x2) will fail, W(T2,x2,200) can get all write lock. (although only from site 1)
-// write succeed, T1, T2 will commit
-
+// Test 20
 begin(T1)
 begin(T2)
+W(T1,x2,9)
 fail(1)
+end(T1)
+begin(T3)
+W(T3,x2,100)
+end(T3)
 recover(1)
 fail(2)
 fail(3)
@@ -18,12 +17,6 @@ fail(7)
 fail(8)
 fail(9)
 fail(10)
-R(T1,x2)
-W(T2,x2,200)
-end(T1)
-end(T2)
-dump()
-
-// Final status of dump
-// x2: 200 at site 1
-// Other variables will not be changed (initial value).
+R(T2,x2)
+begin(T5)
+W(T5,x2,90)

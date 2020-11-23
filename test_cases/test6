@@ -1,22 +1,18 @@
-# Test 6
-// T1 will abort because it write x3 to failed site 4
-// So the value of x3 will NOT change in the end
-// T2 will write x6 to all sites except site 4
-// T2's read for x3 will fail as site 4 fail
-// T1's read for x3 will succeed in the end, as site 4 recover before T1 end
-
+// Test 6
+// T1 ok. T2 ok. T2 reads from a recovering site, but odd variables only
+// at that site
+// At the dump, sites 3 and 4 would have their original values for x8.
+// Future reads of x8 to those sites should be refused until a committed write
+// takes place.
 begin(T1)
 begin(T2)
-W(T1,x3,300)
+fail(3) 
 fail(4)
-W(T2,x6,600)
-R(T2,x3)
-R(T1,x3)
-end(T2)
-recover(4)
+R(T1,x1)
+W(T2,x8,88)
 end(T1)
+recover(4) 
+recover(3)
+R(T2,x3)
+end(T2)
 dump()
-
-// Final status of dump
-// x6: 600 at all sites except site 4, as it failed before write.
-// Other variables will not be changed (initial value).

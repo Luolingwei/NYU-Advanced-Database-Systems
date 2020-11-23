@@ -12,10 +12,18 @@ if __name__ == '__main__':
     #     print("\n")
     #     print("Reading from " + cur_file + "..." + "\n")
 
-    f = open("test_cases/test20", "r")
-    # begin to process commands in 1 input file
+    # f = open("test_cases/test21", "r")
+    # # begin to process commands in 1 input file
+    # ts_manager = TransactionManager()
+    # for line in f.readlines():
+    #     line = line.strip()
+    #     if line and not line.startswith(("#","//")):
+    #         ts_manager.process_line(line)
+
     ts_manager = TransactionManager()
-    for line in f.readlines():
-        line = line.strip()
-        if line and not line.startswith(("#","//")):
-            ts_manager.process_line(line)
+    while True:
+        line = input()
+        if line.strip() == "exit":
+            break
+        ts_manager .process_line(line)
+        

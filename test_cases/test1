@@ -4,14 +4,14 @@
 
 begin(T1)
 begin(T2)
-W(T1,x1,100)
-W(T2,x2,2000)
-W(T1,x2,200)
-W(T2,x1,1000)
+W(T1,x1,101)
+W(T2,x2,202)
+W(T1,x2,102)
+W(T2,x1,201)
 end(T1)
 dump()
 
 // Final status of dump
-// x1: 100 at site 2.
-// x2: 200 at all sites.
+// x1: 101 at site 2.
+// x2: 102 at all sites.
 // Other variables will not be changed (initial value).

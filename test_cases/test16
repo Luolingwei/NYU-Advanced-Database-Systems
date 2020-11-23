@@ -1,19 +1,15 @@
-# Test 16
-// T2 will wait for T1
-// but W(T1,x2,20000) can skip R(T2,x2) as T1 is holding write lock on x2
-// R(T1,x2) will return 20000, which is temp value written by T1
-// when T1 end, R(T2,x2) can return 20000
+// Test 16
+// T3 must wait till the commit of T2 before it reads x4
+// (because of locking), so sees 44.
+// T1 reads x2=22 at site1
 
+begin(T3)
 begin(T1)
 begin(T2)
-W(T1,x2,2000)
-R(T2,x2)
-W(T1,x2,20000)
+W(T3,x2,22)
+W(T2,x4,44)
+R(T3,x4)
+end(T2)
+end(T3)
 R(T1,x2)
 end(T1)
-end(T2)
-dump()
-
-// Final status of dump
-// x2: 20000 at all sites
-// Other variables will not be changed (initial value).

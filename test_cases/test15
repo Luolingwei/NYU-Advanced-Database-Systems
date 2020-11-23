@@ -1,16 +1,23 @@
-# Test 15
-// T2 will wait for T1
-// when T1 end, T2 will execute read(x2), return 2000, then write(x2)
+// Test 15
 
-begin(T1)
+// T1 will abort because x4 is on site 2 and  so 
+// site 2 will lose its locks in the fail event.
+// So T1 will abort. T2 will be fine as will the others.
+
+begin(T5)
+begin(T4)
+begin(T3)
 begin(T2)
-W(T1,x2,2000)
-R(T2,x2)
-W(T2,x2,20000)
+begin(T1)
+W(T1,x4, 5)
+fail(2)
+W(T2,x4,44)
+recover(2)
+W(T3,x4,55)
+W(T4,x4,66)
+W(T5,x4,77)
 end(T1)
 end(T2)
-dump()
-
-// Final status of dump
-// x2: 20000 at all sites
-// Other variables will not be changed (initial value).
+end(T3)
+end(T4)
+end(T5)

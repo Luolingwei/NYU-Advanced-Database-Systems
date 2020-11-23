@@ -1,22 +1,18 @@
-# Test 17
-// T1 will wait for T2, T2 will NOT abort as it commit before site fail
-// when T2 end, T1's read for x5 will succeed, return 500
-// fail(6) cause T1 to abort, as it read x5 from site 6
-// T3's read for x2 will return 20 because T1 abort
+// Test 17
+// T3 must wait till the commit of T2 before it reads x4
+// (because of locking), so sees 44.
+// T3 must abort though because the lock information is lost on site 4 
+// upon failure
+// T1 reads the initial value of x2 because T3 has aborted.
 
+begin(T3)
 begin(T1)
 begin(T2)
-begin(T3)
-W(T1,x2,200)
-W(T2,x5,500)
-R(T1,x5)
+W(T3,x2,22)
+W(T2,x3,44)
+R(T3,x3)
 end(T2)
-fail(6)
-end(T1)
-R(T3,x2)
+fail(4)
 end(T3)
-dump()
-
-// Final status of dump
-// x5: 500 at site 6 [DOWN]
-// Other variables will not be changed (initial value).
+R(T1,x2)
+end(T1)
