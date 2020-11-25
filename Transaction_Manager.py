@@ -282,7 +282,7 @@ class TransactionManager:
 
         site = self.site_list[site_id-1]
         site.fail(self.ts)
-        print("site {} fail at time {}".format(site_id, self.ts))
+        print("site {} fail at time {} \n".format(site_id, self.ts))
         for transaction in self.transaction_table.values():
             # skip read-only T and already to be aborted T
             if transaction.is_read_only or transaction.should_abort:

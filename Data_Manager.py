@@ -103,11 +103,11 @@ class DataManager:
             return RW_Result(True, variable.get_latest_commit_value())
 
 
-    def read_snapshot(self, variable_id: str ,read_ts: int):
+    def read_snapshot(self, variable_id: str, begin_ts: int):
         """
         A read-only transaction T want to read a variable i from this site
         :param variable_id: id of variable which this transaction wants to read from
-        :param read_ts: timestamp when this read happen
+        :param begin_ts: timestamp when transaction T begin
         :return: RW_Result. True means read success, and a value is in RW_Result. False means read fail, no value
         """
         variable: Variable = self.data_table[variable_id]
@@ -116,12 +116,12 @@ class DataManager:
             # our latest commit value exist in the tail of commit queue
             for commit_value in variable.commit_queue[::-1]:
                 # we found the snapshot
-                if commit_value.commit_ts <= read_ts:
+                if commit_value.commit_ts <= begin_ts:
                     if variable.is_replicated:
                         for fail_time in self.fail_time_list:
                             # if site ever failed after the commit and before the transaction's begin time
                             # this snapshot is invalid
-                            if commit_value.commit_ts < fail_time <= read_ts:
+                            if commit_value.commit_ts < fail_time <= begin_ts:
                                 return RW_Result(False)
                     return RW_Result(True, commit_value.value)
         return RW_Result(False)
