@@ -38,7 +38,8 @@ class TransactionManager:
         command = paras.pop(0)
 
         # if there is deadlock detected, we will execute operation queue once more, as deadlock has been cleaned, may succeed now
-        if self.solve_deadlock():
+        # we will solve deadlock until there is not any cycle in graph, as multiple cycles may occur in 1 round
+        while self.solve_deadlock():
             print("Execute operation set again due to deadlock solve")
             self.execute_operations()
         print("processing instruction {}({})".format(command,paras))

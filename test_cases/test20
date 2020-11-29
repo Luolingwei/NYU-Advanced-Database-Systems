@@ -20,8 +20,8 @@ fail(9)
 fail(10)
 R(T1,x2)
 W(T2,x2,200)
-end(T1)
 end(T2)
+end(T1)
 dump()
 
 // Final status of dump
